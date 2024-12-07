@@ -1,34 +1,49 @@
-from functools import wraps
-
-def caching_decorator(func):
-    """
-    A decorator that caches the results of a function based on its arguments.
-    """
+import functools
+def memoize(max_cache_size=5):
     cache = {}
 
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        # Create a unique key using args and kwargs
-        key = (args, frozenset(kwargs.items()))
-        if key not in cache:
-            cache[key] = func(*args, **kwargs)
-            print(f"Cache miss for {key}: Calculating result...")
-        else:
-            print(f"Cache hit for {key}: Using cached result.")
-        return cache[key]
+    def decorator(func):
+        def wrapper(*args):
+            if args in cache:
+                print(f"Fetching from cache for {args}")
+                return cache[args]
+            else:
+                print(f"Calculating result for {args}")
+                result = func(*args)
+                if len(cache) >= max_cache_size:
+                    # Remove the oldest item from the cache
+                    oldest_key = next(iter(cache))
+                    cache.pop(oldest_key)
+                    print(f"Cache full. Removed oldest entry: {oldest_key}")
+                cache[args] = result
+                return result
+        return wrapper
+    return decorator
 
-    return wrapper
+@memoize(max_cache_size=3)
+def factorial(n):
+    if n == 0 or n == 1:
+        return 1
+    return n * factorial(n - 1)
 
-# TESTING THE CACHING DECORATOR
-if __name__ == "__main__":
-    @caching_decorator
-    def expensive_computation(a, b):
-        """
-        Simulates an expensive computation (e.g., heavy calculation or API call).
-        """
-        return a ** b + b ** a
+@memoize(max_cache_size=3)
+def is_prime(n):
+    if n <= 1:
+        return False
+    for i in range(2, int(n**0.5) + 1):
+        if n % i == 0:
+            return False
+    return True
 
-    print(expensive_computation(2, 3))  # Cache miss, result calculated
-    print(expensive_computation(2, 3))  # Cache hit, result reused
-    print(expensive_computation(3, 2))  # Cache miss, result calculated
-    print(expensive_computation(2, 3))  # Cache hit, result reused
+# Example usage
+print(factorial(5))  # Should calculate and cache the result
+print(factorial(5))  # Should fetch from cache
+
+print(is_prime(11))   # Should calculate and cache the result
+print(is_prime(11))   # Should fetch from cache
+print(is_prime(4))    # Should calculate and cache the result
+print(is_prime(4))    # Should fetch from cache
+print(is_prime(13))   # Should calculate and cache the result
+print(is_prime(13))   # Should fetch from cache
+print(is_prime(15))   # Should calculate and cache the result
+print(is_prime(15))   # Should fetch from cache
